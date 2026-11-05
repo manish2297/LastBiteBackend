@@ -1,8 +1,8 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
@@ -28,7 +28,7 @@ const verifyApiKey = (req, res, next) => {
     next();
 };
 
-const dbPath = path.resolve(process.env.DB_FILE || 'lastbite.db');
+const dbPath = path.resolve(__dirname, process.env.DB_FILE || 'lastbite.db');
 const db = new DatabaseSync(dbPath);
 
 // Initialize table if it doesn't exist
@@ -88,6 +88,18 @@ app.post('/api/drops', verifyApiKey, (req, res) => {
     } catch (err) {
         console.error('Error publishing drop:', err);
         res.status(500).json({ error: 'Failed to publish drop' });
+    }
+});
+
+app.patch('/api/drops/:id', verifyApiKey, (req, res) => {
+    const { quantityLeft } = req.body;
+    try {
+        const stmt = db.prepare('UPDATE FlashDrops SET QuantityLeft = ? WHERE Id = ?');
+        stmt.run(quantityLeft, req.params.id);
+        res.status(200).json({ message: 'Stock updated', id: req.params.id, quantityLeft });
+    } catch (err) {
+        console.error('Error updating drop:', err);
+        res.status(500).json({ error: 'Failed to update drop' });
     }
 });
 
